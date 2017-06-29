@@ -30,6 +30,11 @@ const (
 	chunkDataSize uint32 = chunksize - chunkHdrSize
 )
 
+// WARNING DANGER TODO FAKE CODE!!!
+// PROGRAM IS NOT SAFE TO USE UNTIL THESE KEYS ARE REPLACED!!!
+var pubprivkeyb64Ecc = "Tcksa18txiwMEocq7NXdeMwz6PPBD+nxCjb/WCtxq1+dln3M3IaOmg+YfTIbBpk+jIbZZZiT+4CoeFzaJGEWmg=="
+var pubkeyb64Ecc = "Tcksa18txiwMEocq7NXdeMwz6PPBD+nxCjb/WCtxq18="
+
 // Header manifest for a file transfer
 type Header struct {
 	StreamID  uint32
@@ -37,15 +42,6 @@ type Header struct {
 	Chunksize uint32
 	NumChunks uint32
 	Filename  string
-}
-
-func mkStreamDir(tmpDir string, streamID uint32) (string, error) {
-	// Create Directory for File, if not exist
-	tmp := filepath.Join(tmpDir, strconv.FormatUint(uint64(streamID), 16))
-	if _, err := os.Stat(tmp); os.IsNotExist(err) {
-		return tmp, os.Mkdir(tmp, 0700)
-	}
-	return tmp, nil
 }
 
 func main() {
@@ -181,6 +177,7 @@ func main() {
 				if err != nil {
 					log.Println(err)
 				}
+				streamIDtoNumChunks[hdr.StreamID] = hdr.NumChunks // update cache
 			}
 			break
 		case chunkMagic:
@@ -195,28 +192,18 @@ func main() {
 				if err != nil {
 					log.Println(err)
 				}
+				// Are we done?
+				numChunks := chunksForStream(tmpDir, streamID)
+				if numChunks > 0 {
+					if isStreamComplete(tmpDir, streamID, numChunks) {
+						completeFile(tmpDir, streamID, rxDir)
+					}
+				}
 			}
 			break
 		default:
 			log.Println("Magic Doesn't Match!")
 			continue
 		}
-
-		/*
-			filename := filepath.Join(rxDir, "out.mp4")
-			f, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE, 0640)
-			if err != nil {
-				log.Println(err.Error())
-				continue
-			}
-			_, err = f.Write(msg.Content.Bytes())
-			if err != nil {
-				log.Println(err.Error())
-				continue
-			}
-		*/
 	}
 }
-
-var pubprivkeyb64Ecc = "Tcksa18txiwMEocq7NXdeMwz6PPBD+nxCjb/WCtxq1+dln3M3IaOmg+YfTIbBpk+jIbZZZiT+4CoeFzaJGEWmg=="
-var pubkeyb64Ecc = "Tcksa18txiwMEocq7NXdeMwz6PPBD+nxCjb/WCtxq18="
